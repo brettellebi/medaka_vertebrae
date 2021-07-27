@@ -1,0 +1,24 @@
+---
+title: "Meeting log"
+author: "Ian Brettell"
+date: 'Created: `r format(Sys.Date())`'
+output: html_document
+---
+
+# 22 July 2021
+
+* Bigger story using the vertebrae count
+
+* Naren to send
+
+    * F0 raw data for vertebrae counts
+        * Maybe length data too
+    * F1 data
+        * Incl. length
+        
+* Look at correlations between lengths (green sheets) and vertebrae counts
+    * Welch’s t-test?
+    
+* Compare between the crosses
+    * Look at contribution of sex
+

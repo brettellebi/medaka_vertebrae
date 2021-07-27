@@ -1,0 +1,13 @@
+name: "Vertebrae variation in the MIKK panel"
+output_dir: "."
+navbar:
+  title: "Vertebrae variation in the MIKK panel"
+  left:
+    - text: "Analysis"
+      href: index.html
+output:
+  html_document:
+    theme: cosmo
+    highlights: pygments
+    toc: true
+    toc_float: true

@@ -1,0 +1,144 @@
+---
+title: "Vertebrae variation in the MIKK panel"
+author: "Ian Brettell"
+date: '`r format(Sys.Date())`'
+output:
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_float: true
+    dev: 'svg'
+    number_sections: true
+    keep_md: false
+    pandoc_args: --lua-filter=color-text.lua
+    highlight: pygments
+---
+
+# Add libraries
+
+```{r, message = F, warning = F}
+library(here)
+source(here::here("docs/source.R"))
+```
+
+# Read in data
+
+```{r}
+in_file = here::here("data/VC_ARC_F2_Crosses organised_counted_measured_new.xlsx")
+```
+
+## F0
+
+```{r}
+F0_sheet = "F0 VC with Measurements"
+
+F0_data = readxl::read_xlsx(in_file, sheet = F0_sheet) %>% 
+  dplyr::filter(complete.cases(.)) %>% 
+  # get line names
+  tidyr::separate(Name, c("PAT", "GEN_FOCAL"), sep = " ") %>% 
+  # get MAT
+  dplyr::mutate(MAT = PAT) %>% 
+  # get age
+  dplyr::mutate(dplyr::across(c("DOS", "DOB"),
+                              ~as.Date(.x, format = "%d.%m.%Y")),
+                AGE = DOS - DOB) %>% 
+  # remove un-needed columns
+  dplyr::select(PAT,
+                MAT,
+                GEN_FOCAL, 
+                SEX = Comments,
+                AGE,
+                ABD_CNT = Abdominal, CAU_CNT = Caudal, TOT_CNT = Total,
+                ABD_LEN = "Abdominal length",
+                CAU_LEN = "Caudal Length",
+                TOT_LEN = "Total length",
+                ABS_LEN = "Absolute length")
+
+```
+
+## F1
+
+```{r}
+F1_sheet = "F1 VC with Measurements"
+
+F1_data = readxl::read_xlsx(in_file, sheet = F1_sheet) %>% 
+  dplyr::filter(complete.cases(.)) %>% 
+  # get line names
+  tidyr::separate(Name, c("LINE_A", "GEN_A", "SEX_A", NA, "LINE_B", "GEN_B", "SEX_B"), sep = " ") %>% 
+  # get age
+  dplyr::mutate(AGE = DOS - DOB) %>% 
+  # get PAT and MAT line
+  dplyr::mutate(PAT = dplyr::if_else(SEX_A == "Male", LINE_A, LINE_B),
+                MAT = dplyr::if_else(SEX_A == "Female", LINE_A, LINE_B)) %>%
+  # remove un-needed columns
+  dplyr::select(PAT,
+                MAT,
+                GEN_A,
+                GEN_B,
+                SEX = Comments,
+                AGE,
+                ABD_CNT = Abdominal, CAU_CNT = Caudal, TOT_CNT = Total,
+                ABD_LEN = "Abdominal length",
+                CAU_LEN = "Caudal Length",
+                TOT_LEN = "Total length",
+                ABS_LEN = "Absolute length")
+  
+```
+
+## F2
+
+```{r}
+# Target sheets
+F2_sheets = c("14-2 Female x 72-1 Male",
+              "14-2 Male x 72-1 Female",
+              "11-2 Male x14-2 Female",
+              "11-2 Male x 72-1 Female")
+
+# Read in 
+F2_data = purrr::map(F2_sheets, function(SHEET){
+  readxl::read_xlsx(in_file, sheet = SHEET) %>% 
+    # remove Comments column
+    dplyr::select(-Comments) %>% 
+    # remove empty rows
+    dplyr::filter(complete.cases(.)) %>% 
+    # split `Name` to get info
+    tidyr::separate(Name, c(NA, "NAME", NA), sep = "_") %>%
+    # remove leading space from `NAME`
+    dplyr::mutate(NAME = gsub("^ ", "", NAME)) %>% 
+    # split new `NAME` to get parental line and sex
+    tidyr::separate(NAME, c("SEX_A", "LINE_A", "GEN_A", NA, "SEX_B", "LINE_B", "GEN_B"), sep = " ")  %>% 
+    # get PAT and MAT line
+    dplyr::mutate(PAT = dplyr::if_else(SEX_A == "Male", LINE_A, LINE_B),
+                  MAT = dplyr::if_else(SEX_A == "Female", LINE_A, LINE_B)) %>%
+    # rename `Total Vertebrae` in the second two sheets as `Total` to make consistent with the first two
+    dplyr::rename_with(dplyr::recode, `Total Vertebrae` = "Total") %>% 
+    # remove un-needed columns
+    dplyr::select(PAT,
+                  MAT,
+                  GEN_A,
+                  GEN_B,
+                  ABD_CNT = Abdominal, CAU_CNT = Caudal, TOT_CNT = Total,
+                  ABD_LEN = `Abdominal  Length`,
+                  CAU_LEN = `Caudal length`,
+                  TOT_LEN = `Total vertebrae length`,
+                  ABS_LEN = `Absolute length`,
+                  ) %>% 
+    # convert `CAU_LEN to numeric
+    dplyr::mutate(CAU_LEN = as.numeric(CAU_LEN))
+}) %>% 
+  # bind into single DF
+  dplyr::bind_rows()
+```
+
+## Combine into single DF
+
+```{r}
+df = list(F0_data,
+          F1_data,
+          F2_data) %>% 
+  dplyr::bind_rows(.id = "CROSS_GEN") %>% 
+  dplyr::mutate(CROSS_GEN = gsub("_GEN", "", CROSS_GEN))
+
+DT::datatable(df)
+```
+
