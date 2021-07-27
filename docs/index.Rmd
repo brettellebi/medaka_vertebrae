@@ -14,7 +14,7 @@ output:
     highlight: pygments
 ---
 
-# Add libraries
+# Load libraries
 
 ```{r, message = F, warning = F}
 library(here)
@@ -52,7 +52,12 @@ F0_data = readxl::read_xlsx(in_file, sheet = F0_sheet) %>%
                 ABD_LEN = "Abdominal length",
                 CAU_LEN = "Caudal Length",
                 TOT_LEN = "Total length",
-                ABS_LEN = "Absolute length")
+                ABS_LEN = "Absolute length",
+                ABD_2_CAU = "AV/CV",
+                ABD_2_TOT = "AV/TL",
+                CAU_2_TOT = "CV/TL",
+                ABD_2_ABS = "AV/AL",
+                CAU_2_ABS = "CV/AL")
 
 ```
 
@@ -81,7 +86,12 @@ F1_data = readxl::read_xlsx(in_file, sheet = F1_sheet) %>%
                 ABD_LEN = "Abdominal length",
                 CAU_LEN = "Caudal Length",
                 TOT_LEN = "Total length",
-                ABS_LEN = "Absolute length")
+                ABS_LEN = "Absolute length",
+                ABD_2_CAU = "AV/CV",
+                ABD_2_TOT = "AV/TL",
+                CAU_2_TOT = "CV/TL",
+                ABD_2_ABS = "AV/AL",
+                CAU_2_ABS = "CV/AL")
   
 ```
 
@@ -122,7 +132,11 @@ F2_data = purrr::map(F2_sheets, function(SHEET){
                   CAU_LEN = `Caudal length`,
                   TOT_LEN = `Total vertebrae length`,
                   ABS_LEN = `Absolute length`,
-                  ) %>% 
+                  ABD_2_CAU = "Abd/Cau",
+                  ABD_2_TOT = "Abdominal/total vertebrae",
+                  CAU_2_TOT = "Caudal/total vertebrae",
+                  ABD_2_ABS = "Abd/Abs",
+                  CAU_2_ABS = "Cau/Abs") %>% 
     # convert `CAU_LEN to numeric
     dplyr::mutate(CAU_LEN = as.numeric(CAU_LEN))
 }) %>% 
@@ -133,12 +147,190 @@ F2_data = purrr::map(F2_sheets, function(SHEET){
 ## Combine into single DF
 
 ```{r}
-df = list(F0_data,
-          F1_data,
-          F2_data) %>% 
-  dplyr::bind_rows(.id = "CROSS_GEN") %>% 
-  dplyr::mutate(CROSS_GEN = gsub("_GEN", "", CROSS_GEN))
+df = list(F0 = F0_data,
+          F1 = F1_data,
+          F2 = F2_data) %>% 
+  dplyr::bind_rows(.id = "CROSS_GEN") 
 
 DT::datatable(df)
 ```
 
+# Plot
+
+## F0
+
+Explore which measures show the biggest variation in F0
+
+```{r}
+count_measures = c("ABD_CNT",
+                   "CAU_CNT",
+                   "TOT_CNT")
+
+length_measures = c("ABD_LEN",
+                    "CAU_LEN",
+                    "TOT_LEN",
+                    "ABS_LEN")
+
+ratio_measures = c("ABD_2_ABS",
+                   "ABD_2_TOT",
+                   "CAU_2_ABS",
+                   "CAU_2_TOT",
+                   "ABD_2_CAU")
+```
+
+### Counts
+
+```{r}
+df %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(count_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = count_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#66717E", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(SEX ~ MEASURE) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ylim(0, NA) +
+    ggtitle("F0 count measures: split sex") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none")
+
+df %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(count_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = count_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#66717E", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(cols = vars(MEASURE)) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ylim(0, NA) +
+    ggtitle("F0 count measures: all") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none")    
+```
+
+### Lengths
+
+```{r}
+# Separated by sex
+df %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(length_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = length_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(SEX ~ MEASURE) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ggtitle("F0 length measures: split sex") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none")
+
+# Consolidated sex
+df %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(length_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = length_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(cols = vars(MEASURE)) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ggtitle("F0 length measures: all") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none")
+```
+
+### Ratios
+
+```{r}
+df %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(ratio_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = ratio_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(SEX ~ MEASURE) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ylim(0,1) +
+    ggtitle("F0 ratio measures: split sex") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none")
+
+# With consolidated sex
+df %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(ratio_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = ratio_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(cols = vars(MEASURE)) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ylim(0,1) +
+    ggtitle("F0 ratio measures: all") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none")
+```
