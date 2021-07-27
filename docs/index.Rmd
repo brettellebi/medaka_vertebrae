@@ -399,17 +399,17 @@ df %>%
 
 Can't tell anything about the effect of age on length because all the individuals in each group were assayed on the same day.
 
-# Correlation between vertebrae count and absolute length
+# Correlation between F2 vertebrae count and absolute length
 
 ```{r}
 df %>% 
+  dplyr::filter(CROSS_GEN == "F2") %>% 
   # order
   dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
                 MAT = factor(MAT, levels = rev(parental_lines))) %>% 
   ggplot() +
     geom_point(aes(TOT_CNT, ABS_LEN, colour = PAT, fill = MAT), shape = 21) +
-    geom_smooth(aes(TOT_CNT, ABS_LEN)) +
-    facet_grid(cols = vars(CROSS_GEN )) +
+    facet_grid(cols = vars(PAT), rows = vars(MAT)) +
     scale_colour_manual(values = darker(pal_ror, amount = 50)) +
     scale_fill_manual(values = pal_ror) +
     theme_bw() +
