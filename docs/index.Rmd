@@ -155,9 +155,7 @@ df = list(F0 = F0_data,
 DT::datatable(df)
 ```
 
-# Plot
-
-## F0
+# Plot F0
 
 Explore which measures show the biggest variation in F0
 
@@ -178,7 +176,7 @@ ratio_measures = c("ABD_2_ABS",
                    "ABD_2_CAU")
 ```
 
-### Counts
+## Counts
 
 ```{r}
 df %>% 
@@ -230,7 +228,7 @@ df %>%
            colour = "none")    
 ```
 
-### Lengths
+## Lengths
 
 ```{r}
 # Separated by sex
@@ -282,9 +280,10 @@ df %>%
            colour = "none")
 ```
 
-### Ratios
+## Ratios
 
 ```{r}
+# Separated by sex
 df %>% 
   dplyr::filter(CROSS_GEN == "F0") %>% 
   # pivot longer
@@ -309,7 +308,7 @@ df %>%
     guides(fill = "none",
            colour = "none")
 
-# With consolidated sex
+# Consolidated sex
 df %>% 
   dplyr::filter(CROSS_GEN == "F0") %>% 
   # pivot longer
@@ -334,3 +333,88 @@ df %>%
     guides(fill = "none",
            colour = "none")
 ```
+
+
+# Plot F0 and F1 for absolute length
+
+```{r}
+df %>% 
+  dplyr::filter(CROSS_GEN %in% c("F0", "F1")) %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MAT = factor(MAT, levels = rev(parental_lines))) %>% 
+  ggplot(aes(PAT, ABS_LEN, colour = PAT, fill = MAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(MAT ~ CROSS_GEN ) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ggtitle("Absolute length of F0 and F1 generations") 
+#    xlab("Line") +
+#    ylab("Value") +
+#    guides(fill = "none",
+#           colour = "none")
+```
+
+# Plot all generations for absolute length
+
+```{r, out.width='100%', fig.dim = c(12, 10)}
+df %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MAT = factor(MAT, levels = rev(parental_lines))) %>% 
+  ggplot(aes(PAT, ABS_LEN, colour = PAT, fill = MAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(MAT ~ CROSS_GEN ) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ggtitle("Absolute length of all generations") 
+```
+
+Strange that the F2 individuals are so much smaller than the F0 and F1 generations. Is it related to their age?
+
+```{r}
+# No age data for F2:
+df %>% dplyr::filter(CROSS_GEN == "F2") %>% count(AGE)
+
+# Plot for F0 and F1
+df %>% 
+  dplyr::filter(CROSS_GEN %in% c("F0", "F1")) %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MAT = factor(MAT, levels = rev(parental_lines))) %>% 
+  ggplot(aes(AGE, ABS_LEN, colour = PAT, fill = MAT)) +
+    geom_point(shape = 21) +
+    facet_grid(MAT ~ CROSS_GEN ) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ggtitle("Absolute length of all generations") 
+```
+
+Can't tell anything about the effect of age on length because all the individuals in each group were assayed on the same day.
+
+# Correlation between vertebrae count and absolute length
+
+```{r}
+df %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MAT = factor(MAT, levels = rev(parental_lines))) %>% 
+  ggplot() +
+    geom_point(aes(TOT_CNT, ABS_LEN, colour = PAT, fill = MAT), shape = 21) +
+    geom_smooth(aes(TOT_CNT, ABS_LEN)) +
+    facet_grid(cols = vars(CROSS_GEN )) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ggtitle("Relationship between total vertebrae count and absolute length") 
+```
+
+
+
