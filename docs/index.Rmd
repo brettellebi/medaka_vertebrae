@@ -416,5 +416,76 @@ df %>%
     ggtitle("Relationship between total vertebrae count and absolute length") 
 ```
 
+# Comparison of vertebrae counts between F0, F1 and F2
 
+## Read in data
+
+### Extra sheets with F2 counts
+
+```{r}
+extra_F2_sheets = readxl::excel_sheets(in_file)[4:18]
+
+F2_extra = purrr::map(extra_F2_sheets, function(SHEET){
+  out = readxl::read_xlsx(in_file, sheet = SHEET) %>% 
+    # remove Comments column
+    dplyr::select(Name, Abdominal, Caudal, Total) %>% 
+    # remove empty rows
+    dplyr::filter(complete.cases(.)) %>% 
+    # split `Name` to get info
+    tidyr::separate(Name, c(NA, "NAME", NA), sep = "_") %>% 
+    # remove leading space from `NAME`
+    dplyr::mutate(NAME = gsub("^ ", "", NAME)) %>% 
+    tidyr::separate(NAME, c("SEX_A", "LINE_A", NA, NA, "SEX_B", "LINE_B", NA), sep = " ") %>% 
+    # Set `PAT` and `MAT` lines
+    dplyr::mutate(PAT = dplyr::if_else(SEX_A == "Male", LINE_A, LINE_B),
+                  MAT = dplyr::if_else(SEX_A == "Female", LINE_A, LINE_B)) %>% 
+    # Select key columns
+    dplyr::select(PAT, MAT, Abdominal, Caudal, Total)
+  
+  return(out)
+}) %>% 
+  dplyr::bind_rows()
+```
+
+### Read in average F0 vertebrae count
+
+```{r}
+F0_means = readxl::read_xlsx(in_file,
+                             sheet = "Details of crosses",
+                             range = "C6:D14") %>% 
+  # split generation
+  tidyr::separate(Line, c("LINE", "GEN"), sep = " ")
+```
+
+### Bind into single DF
+
+```{r}
+counts_df = list(F0 = F0_means %>% 
+                   dplyr::select(PAT = LINE,
+                                 MAT = LINE,
+                                 TOT_CNT = "Vertebrae number"),
+                 F1 = F1_data %>% 
+                   dplyr::select(PAT, MAT, TOT_CNT),
+                 F2 = F2_extra %>% 
+                   dplyr::select(PAT, MAT, TOT_CNT = Total)) %>% 
+  dplyr::bind_rows(.id = "CROSS_GEN")
+```
+
+## Plot
+
+```{r, out.width = '100%', fig.dim = c(10,10)}
+counts_df %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines_ext),
+                MAT = factor(MAT, levels = rev(parental_lines_ext))) %>% 
+  ggplot(aes(PAT, TOT_CNT, colour = PAT, fill = MAT)) +
+    geom_violin() +
+    geom_boxplot(width = .1) +
+#    ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(MAT ~ CROSS_GEN ) +
+    scale_colour_manual(values = pal_sat) +
+    scale_fill_manual(values = pal_sat) +
+    theme_bw() +
+    ggtitle("Total vertebrae count across generations") 
+```
 
