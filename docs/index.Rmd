@@ -489,3 +489,128 @@ counts_df %>%
     ggtitle("Total vertebrae count across generations") 
 ```
 
+# Number-length ratios
+
+## Add ratio data
+
+```{r}
+df_ratios = df %>% 
+  dplyr::mutate(ABD_CNT_2_LEN = ABD_CNT / ABD_LEN,
+                CAU_CNT_2_LEN = CAU_CNT / CAU_LEN,
+                TOT_CNT_2_LEN = TOT_CNT / ABD_LEN,
+                ABD_CAU_RAT = ABD_CNT_2_LEN / CAU_CNT_2_LEN,
+                ABD_TOT_RAT = ABD_CNT_2_LEN / TOT_CNT_2_LEN,
+                CAU_TOT_RAT = CAU_CNT_2_LEN / TOT_CNT_2_LEN)
+
+new_rat_measures = c("ABD_CNT_2_LEN", "CAU_CNT_2_LEN", "TOT_CNT_2_LEN",
+                     "ABD_CAU_RAT", "ABD_TOT_RAT", "CAU_TOT_RAT")
+```
+
+## Plot
+
+### Compare measures
+
+```{r, fig.dim = c(10, 10), out.width='100%'}
+# Faceted by sex
+df_ratios %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(new_rat_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = new_rat_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#66717E", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(SEX ~ MEASURE) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ylim(0, NA) +
+    ggtitle("F0 count to length measures: split sex") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none") 
+
+# Consolidated sex
+df_ratios %>% 
+  dplyr::filter(CROSS_GEN == "F0") %>% 
+  # pivot longer
+  tidyr::pivot_longer(cols = all_of(new_rat_measures),
+                      names_to = "MEASURE",
+                      values_to = "VALUE") %>% 
+  # order
+  dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                MEASURE = factor(MEASURE, levels = new_rat_measures)) %>% 
+  ggplot(aes(PAT, VALUE, colour = PAT, fill = PAT)) +
+    geom_violin() +
+    geom_boxplot(width = .3) +
+    ggbeeswarm::geom_quasirandom(color="#66717E", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(cols = vars(MEASURE)) +
+    scale_colour_manual(values = darker(pal_ror, amount = 50)) +
+    scale_fill_manual(values = pal_ror) +
+    theme_bw() +
+    ylim(0, NA) +
+    ggtitle("F0 count to length measures: all") +
+    xlab("Line") +
+    ylab("Value") +
+    guides(fill = "none",
+           colour = "none")  
+```
+
+The count-to-length measures do seem to separate the F0 lines. Use them to compare F0, F1 and F2
+
+### Compare F0, F1 and F2 generations
+
+#### All three
+
+```{r, fig.dim = c(10, 10), out.width='100%'}
+target_measures = c("ABD_CNT_2_LEN", "CAU_CNT_2_LEN", "TOT_CNT_2_LEN")
+target_desc = c("Abdominal count:length", "Caudal count:length", "Total count:length")
+
+purrr::map(seq_along(target_measures), function(INDEX){
+  df_ratios %>% 
+    # order
+    dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                  MAT = factor(MAT, levels = parental_lines)) %>% 
+    ggplot(aes_string("PAT", target_measures[INDEX], colour = "PAT", fill = "MAT")) +
+      geom_violin() +
+      geom_boxplot(width = .3) +
+      ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+      facet_grid(MAT ~ CROSS_GEN ) +
+      scale_colour_manual(values = pal_ror) +
+      scale_fill_manual(values = pal_ror) +
+      theme_bw() +
+      ggtitle(target_desc[INDEX]) +
+      ylab(target_desc[INDEX])
+})
+
+```
+
+#### Without F1
+
+```{r, fig.dim = c(10, 15), out.width='100%'}
+purrr::map(seq_along(target_measures), function(INDEX){
+  df_ratios %>% 
+    # remove F1
+    dplyr::filter(CROSS_GEN != "F1") %>% 
+    # order
+    dplyr::mutate(PAT = factor(PAT, levels = parental_lines),
+                  MAT = factor(MAT, levels = parental_lines)) %>% 
+    ggplot(aes_string("PAT", target_measures[INDEX], colour = "PAT", fill = "MAT")) +
+      geom_violin() +
+      geom_boxplot(width = .3) +
+      ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+      facet_grid(MAT ~ CROSS_GEN ) +
+      scale_colour_manual(values = pal_ror) +
+      scale_fill_manual(values = pal_ror) +
+      theme_bw() +
+      ggtitle(target_desc[INDEX]) +
+      ylab(target_desc[INDEX])
+})
+```
+
