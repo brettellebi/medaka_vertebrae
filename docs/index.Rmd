@@ -473,6 +473,8 @@ counts_df = list(F0 = F0_means %>%
 
 ## Plot
 
+### Maternal and Paternal separate
+
 ```{r, out.width = '100%', fig.dim = c(10,10)}
 counts_df %>% 
   # order
@@ -488,6 +490,122 @@ counts_df %>%
     theme_bw() +
     ggtitle("Total vertebrae count across generations") 
 ```
+
+### Maternal and Paternal consolidated
+
+#### 14-2 
+
+```{r}
+# Make recode vector
+cnt_recode_vec = c(rep("LOW", 2), "MED", rep("HIGH", 5))
+names(cnt_recode_vec) = F0_means$LINE
+
+high_crosses = c("33-1", "60-1", "129-1")
+
+f2_count = counts_df %>% 
+  dplyr::filter(CROSS_GEN == "F2",
+                MAT == "14-2" | PAT == "14-2",
+                MAT %in% high_crosses | PAT %in% high_crosses) 
+
+f2_count %>% 
+  dplyr::count(PAT, MAT)
+
+# Low vs high
+line_14_2_plot = counts_df %>% 
+  dplyr::mutate(PAT_GRADE = dplyr::recode(PAT, !!!cnt_recode_vec),
+                MAT_GRADE = dplyr::recode(MAT, !!!cnt_recode_vec),
+                EXTREME_X = dplyr::case_when(PAT_GRADE == "LOW" & MAT_GRADE == "HIGH" ~ "YES",
+                                             MAT_GRADE == "LOW" & PAT_GRADE == "HIGH" ~ "YES",
+                                             TRUE ~ "NO")) %>% 
+  # Take extreme crosses
+  dplyr::filter(CROSS_GEN == "F0" | EXTREME_X == "YES") %>% 
+  # Get LOW and HIGH lines
+  dplyr::mutate(LOW_LINE = dplyr::case_when(PAT_GRADE == "LOW" ~ PAT,
+                                            MAT_GRADE == "LOW" ~ MAT,
+                                            PAT_GRADE == MAT_GRADE ~ PAT),
+                HIGH_LINE = dplyr::case_when(PAT_GRADE == "HIGH" ~ PAT,
+                                             MAT_GRADE == "HIGH" ~ MAT,
+                                             PAT_GRADE == MAT_GRADE ~ PAT)) %>% 
+  # Take just crosses involving 14-2
+  dplyr::filter(PAT == "14-2" | MAT == "14-2" | CROSS_GEN == "F0" & PAT %in% c("33-1", "60-1", "129-1")) %>% 
+  # Order
+  dplyr::mutate(HIGH_LINE = factor(HIGH_LINE, levels = parental_lines_ext)) %>% 
+  # Plot
+  ggplot(aes(HIGH_LINE, TOT_CNT, colour = HIGH_LINE, fill = LOW_LINE)) +
+    geom_violin() +
+    geom_boxplot(width = .1) +
+    #ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(cols = vars(CROSS_GEN )) +
+    scale_colour_manual(values = pal_sat) +
+    scale_fill_manual(values = pal_sat) +
+    theme_bw() +
+    ggtitle(paste("Extreme crosses with 14-2 (low vertebrae count)\n",
+                  "Total F2 individuals: ",
+                  nrow(f2_count),
+                  sep = "")) +
+    xlab(NULL) +
+    ylab("Total vertebrae count") +
+    guides(fill = "none", colour = "none") 
+
+line_14_2_plot
+```
+
+#### 95-1
+
+```{r}
+target_line = "95-1"
+high_crosses = c("33-1", "72-1", "129-1")
+
+f2_count = counts_df %>% 
+  dplyr::filter(CROSS_GEN == "F2",
+                MAT == target_line | PAT == target_line,
+                MAT %in% high_crosses | PAT %in% high_crosses) 
+
+f2_count %>% 
+  dplyr::count(PAT, MAT)
+
+# Low vs high
+line_95_1_plot = counts_df %>% 
+  dplyr::mutate(PAT_GRADE = dplyr::recode(PAT, !!!cnt_recode_vec),
+                MAT_GRADE = dplyr::recode(MAT, !!!cnt_recode_vec),
+                EXTREME_X = dplyr::case_when(PAT_GRADE == "LOW" & MAT_GRADE == "HIGH" ~ "YES",
+                                             MAT_GRADE == "LOW" & PAT_GRADE == "HIGH" ~ "YES",
+                                             TRUE ~ "NO")) %>% 
+  # Take extreme crosses
+  dplyr::filter(CROSS_GEN == "F0" | EXTREME_X == "YES") %>% 
+  # Get LOW and HIGH lines
+  dplyr::mutate(LOW_LINE = dplyr::case_when(PAT_GRADE == "LOW" ~ PAT,
+                                            MAT_GRADE == "LOW" ~ MAT,
+                                            PAT_GRADE == MAT_GRADE ~ PAT),
+                HIGH_LINE = dplyr::case_when(PAT_GRADE == "HIGH" ~ PAT,
+                                             MAT_GRADE == "HIGH" ~ MAT,
+                                             PAT_GRADE == MAT_GRADE ~ PAT)) %>% 
+  # Take just crosses involving 14-2
+  dplyr::filter(PAT == target_line | MAT == target_line | CROSS_GEN == "F0" & PAT %in% high_crosses) %>% 
+  # Order
+  dplyr::mutate(HIGH_LINE = factor(HIGH_LINE, levels = parental_lines_ext)) %>% 
+  # Plot
+  ggplot(aes(HIGH_LINE, TOT_CNT, colour = HIGH_LINE, fill = LOW_LINE)) +
+    geom_violin() +
+    geom_boxplot(width = .1) +
+    #ggbeeswarm::geom_quasirandom(color="#7D8491", size=0.4, alpha=0.9, groupOnX = T) +
+    facet_grid(cols = vars(CROSS_GEN )) +
+    scale_colour_manual(values = pal_sat) +
+    scale_fill_manual(values = pal_sat) +
+    theme_bw() +
+    ggtitle(paste("Extreme crosses with ",
+                  target_line,
+                  " (low vertebrae count)\n",
+                  "Total F2 individuals: ",
+                  nrow(f2_count),
+                  sep = "")) +
+    xlab(NULL) +
+    ylab("Total vertebrae count") +
+    guides(fill = "none", colour = "none") 
+
+line_95_1_plot
+```
+
 
 # Number-length ratios
 
